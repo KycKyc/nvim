@@ -17,9 +17,9 @@ return {
 					-- once nvim-treesitter is loaded
 					require("lazy.core.loader").disable_rtp_plugin("nvim-treesitter-textobjects")
 				end,
-                config = function()
-                    require("nvim-treesitter-textobjects").init()
-                end
+				config = function()
+					require("nvim-treesitter-textobjects").init()
+				end,
 			},
 		},
 		cmd = { "TSUpdateSync" },
@@ -72,14 +72,23 @@ return {
 			matchup = {
 				enable = true, -- mandatory, false will disable the whole extension
 				-- disable = { "json" }, -- optional, list of language that will be disabled
+				disable = function(lang, bufnr) -- Disable in large JSON buffers
+					return lang == "json" and vim.api.nvim_buf_line_count(bufnr) > 50000
+				end,
 				-- [options]
 			},
+
 			context_commentstring = {
 				enable = true,
 				enable_autocmd = false,
 			},
 
 			-- indent = { enable = true },
+
+			autotag = {
+				enable = true,
+			},
+
 			textobjects = {
 				select = {
 					enable = true,
@@ -139,7 +148,12 @@ return {
 			},
 
 			refactor = {
-				highlight_definitions = { enable = true },
+				highlight_definitions = {
+					enable = true,
+					disable = function(lang, bufnr) -- Disable in large JSON buffers
+						return lang == "json" and vim.api.nvim_buf_line_count(bufnr) > 50000
+					end,
+				},
 				smart_rename = {
 					enable = true,
 					keymaps = {

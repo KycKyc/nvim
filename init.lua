@@ -18,6 +18,11 @@ require("winbar")
 require("tweaks")
 require("opts")
 require("funcs")
+require("filetypes")
+
+-- Trick netrw into thinking it's loaded, we are using Neotree instead
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
 
 -- Load plugins
 -- require("lazy").setup("plugins")

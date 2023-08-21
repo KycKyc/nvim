@@ -1,27 +1,44 @@
-local lsp_formatting = function(bufnr)
-	vim.lsp.buf.format({
-		filter = function(client)
-			-- apply whatever logic you want (in this example, we'll only use null-ls)
-			return client.name == "null-ls"
-		end,
-		bufnr = bufnr,
-		async = false,
-	})
+-- local lsp_formatting = function(bufnr)
+-- 	vim.lsp.buf.format({
+-- 		filter = function(client)
+-- 			-- apply whatever logic you want (in this example, we'll only use null-ls)
+-- 			return client.name == "null-ls"
+-- 		end,
+-- 		bufnr = bufnr,
+-- 		async = false,
+-- 	})
+-- end
+
+local formatBuf = function(_, write)
+	local formatter = require("formatter.format")
+	local end_line = vim.fn.line("$")
+
+	formatter.format("", "", 1, end_line, { write = write })
 end
 
 local on_attach = function(client, bufnr)
+	-- local attached = vim.fn.getbufvar(bufnr, "lsp_attached")
+	-- if attached then
+	-- 	print("Already attached to a client")
+	-- 	return
+	-- end
+	-- vim.fn.setbufvar(bufnr, "lsp_attached", true)
+
+	-- Ignore copilot lsp, nothing to do with following defenitions
 	if client.name == "copilot" then
 		return
 	end
+
 	local lsp = require("lsp-zero")
-	local augroup = vim.api.nvim_create_augroup("SmartFormatting", {})
+	-- local augroup = vim.api.nvim_create_augroup("SmartFormatting", {})
 	local telesope = require("telescope.builtin")
 
 	lsp.default_keymaps({ buffer = bufnr })
 	local opts = { buffer = bufnr }
 
 	vim.keymap.set({ "n", "x" }, "<F3>", function()
-		lsp_formatting(bufnr)
+		-- lsp_formatting(bufnr)
+		formatBuf(bufnr, false)
 	end, opts)
 
 	vim.keymap.set({ "n", "x" }, "gd", function()
@@ -45,16 +62,16 @@ local on_attach = function(client, bufnr)
 		vim.cmd.normal("zzzv")
 	end, opts)
 
-	if client.supports_method("textDocument/formatting") then
-		vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
-		vim.api.nvim_create_autocmd("BufWritePre", {
-			group = augroup,
-			buffer = bufnr,
-			callback = function()
-				lsp_formatting(bufnr)
-			end,
-		})
-	end
+	-- if client.supports_method("textDocument/formatting") then
+	-- 	vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
+	-- 	vim.api.nvim_create_autocmd("BufWritePre", {
+	-- 		group = augroup,
+	-- 		buffer = bufnr,
+	-- 		callback = function()
+	-- 			lsp_formatting(bufnr)
+	-- 		end,
+	-- 	})
+	-- end
 end
 
 return {
@@ -147,6 +164,7 @@ return {
 				},
 			})
 			lspconfig.yamlls.setup({
+				filetypes = { "yaml", "yml", "compose" },
 				settings = {
 					yaml = {
 						schemaStore = {
@@ -158,7 +176,7 @@ return {
 					},
 				},
 			})
-			-- lspconfig.eslint.setup({})
+			-- lspconfig.eslint_d.setup({})
 			lspconfig.gopls.setup({
 				settings = {
 					gopls = {
@@ -184,7 +202,9 @@ return {
 					},
 				},
 			})
-			lspconfig.docker_compose_language_service.setup({})
+			lspconfig.docker_compose_language_service.setup({
+				filetypes = { "compose" },
+			})
 			lspconfig.dockerls.setup({})
 			lspconfig.bashls.setup({})
 			lspconfig.tsserver.setup({
@@ -279,106 +299,324 @@ return {
 	},
 
 	-- Setting up null-ls
+	-- {
+	-- 	"jose-elias-alvarez/null-ls.nvim",
+	-- 	event = { "BufReadPre", "BufNewFile" },
+	-- 	dependencies = {
+	-- 		-- Depends on mason
+	-- 		"williamboman/mason.nvim",
+	-- 		-- Some functions are depends on telescope
+	-- 		"nvim-telescope/telescope.nvim",
+	-- 	},
+	-- 	opts = function()
+	-- 		local nls = require("null-ls")
+	-- 		return {
+	-- 			on_attach = on_attach,
+	-- 			sources = {
+	-- 				nls.builtins.diagnostics.eslint_d,
+	-- 				nls.builtins.diagnostics.pylint.with({
+	-- 					extra_args = {
+	-- 						"--enable=W0614,E,W,F",
+	-- 						"--max-line-length=256",
+	-- 						"--disable=C0301,line-too-long,missing-function-docstring,invalid-name,missing-class-docstring,consider-using-f-string,abstract-class-instantiated,broad-except",
+	-- 					},
+	-- 				}),
+	-- 				nls.builtins.diagnostics.stylelint,
+	-- 				nls.builtins.formatting.eslint_d,
+	-- 				nls.builtins.formatting.isort,
+	-- 				nls.builtins.formatting.prettierd,
+	-- 				nls.builtins.formatting.stylua,
+	-- 				nls.builtins.formatting.autopep8.with({
+	-- 					extra_args = {
+	-- 						"--max-line-length=256",
+	-- 						"--experimental",
+	-- 						"--ignore=E501",
+	-- 					},
+	-- 				}),
+	-- 				nls.builtins.formatting.fixjson,
+	-- 				nls.builtins.formatting.gofmt,
+	-- 				nls.builtins.formatting.goimports,
+	-- 				nls.builtins.code_actions.gitsigns,
+	-- 			},
+	-- 		}
+	-- 	end,
+	-- },
+
+	-- Setting up linters
 	{
-		"jose-elias-alvarez/null-ls.nvim",
-		event = { "BufReadPre", "BufNewFile" },
-		dependencies = {
-			-- Depends on mason
-			"williamboman/mason.nvim",
-			-- Some functions are depends on telescope
-			"nvim-telescope/telescope.nvim",
-		},
+		"mfussenegger/nvim-lint",
+		config = function()
+			local lint = require("lint")
+			lint.linters_by_ft = {
+				python = { "pylint" },
+				javascript = { "eslint_d" },
+				typescript = { "eslint_d" },
+				typescriptreact = { "eslint_d" },
+				javascriptreact = { "eslint_d" },
+				lua = { "luacheck" },
+				-- go = { "golangci_lint" },
+				json = { "jsonlint" },
+				yaml = { "yamllint" },
+				compose = { "yamllint" },
+				markdown = { "markdownlint" },
+				vim = { "vint" },
+				sh = { "shellcheck" },
+				-- dockerfile = { "hadolint" },
+				cpp = { "cppcheck" },
+				c = { "cppcheck" },
+				html = { "tidy" },
+				css = { "stylelint" },
+				scss = { "stylelint" },
+				less = { "stylelint" },
+				vue = { "eslint_d" },
+				svelte = { "eslint_d" },
+				sql = { "sqlint" },
+			}
+
+			lint.linters.luacheck.args = { "--formatter", "plain", "--codes", "--ranges", "--read-gloabals vim", "-" }
+			lint.linters.pylint.args = {
+				"--disable=C0301,line-too-long,missing-function-docstring,invalid-name,missing-class-docstring,consider-using-f-string,abstract-class-instantiated,broad-except",
+				"--max-line-length=256",
+				"--enable=W0614,E,W,F",
+				"-f",
+				"json",
+			}
+			lint.linters.yamllint.args = {
+				"-f",
+				"parsable",
+				"-d",
+				"{extends: default, rules: {line-length: {max: 256}, document-start: disable}}",
+				"-",
+			}
+
+			vim.api.nvim_create_autocmd({ "InsertLeave", "BufEnter", "BufWritePost" }, {
+				pattern = {
+					"*.lua",
+					"*.go",
+					"*.py",
+					"*.js",
+					"*.jsx",
+					"*.ts",
+					"*.tsx",
+					"*.json",
+					"*.yaml",
+					"*.yml",
+					"*.md",
+					"*.vim",
+					"*.sh",
+					"*.Dockerfile",
+					"*.cpp",
+					"*.c",
+					"*.html",
+					"*.css",
+					"*.scss",
+					"*.less",
+					"*.vue",
+					"*.svelte",
+					"*.sql",
+					"*.fish",
+				},
+				callback = function(_)
+					-- require("notify")(
+					-- 	"Linting...",
+					-- 	vim.log.levels.INFO,
+					-- 	{ timeout = 500, position = "bottom_center", icon = "", render = "minimal" }
+					-- )
+					lint.try_lint()
+				end,
+			})
+
+			-- vim.api.nvim_create_autocmd({ "BufWritePost" }, {
+			--              pattern = {"*.lua"},
+			-- 	callback = function()
+			-- 		lint.try_lint()
+			-- 	end,
+			-- })
+		end,
+	},
+
+	-- Setting up formatter
+	{
+		"mhartington/formatter.nvim",
 		opts = function()
-			local nls = require("null-ls")
+			local stylelua = require("formatter.filetypes.lua").stylua
+			local gofmt = require("formatter.filetypes.go").gofmt
+			local goimports = require("formatter.filetypes.go").goimports
+			local prettierd = require("formatter.defaults.prettierd")
+			local eslint_d = require("formatter.defaults.eslint_d")
+			-- local autopep8 = require("formatter.filetypes").autopep8
+			-- local isort = require("formatter.filetypes.python").isort
+			local rustfmt = require("formatter.filetypes.rust").rustfmt
 			return {
-				on_attach = on_attach,
-				sources = {
-					nls.builtins.diagnostics.eslint_d,
-					nls.builtins.diagnostics.pylint.with({
-						extra_args = {
-							"--enable=W0614,E,W,F",
-							"--max-line-length=256",
-							"--disable=C0301,line-too-long,missing-function-docstring,invalid-name,missing-class-docstring,consider-using-f-string,abstract-class-instantiated,broad-except",
-						},
-					}),
-					nls.builtins.diagnostics.stylelint,
-					nls.builtins.formatting.eslint_d,
-					nls.builtins.formatting.isort,
-					nls.builtins.formatting.prettierd,
-					nls.builtins.formatting.stylua,
-					nls.builtins.formatting.autopep8.with({
-						extra_args = {
-							"--max-line-length=256",
-							"--experimental",
-							"--ignore=E501",
-						},
-					}),
-					nls.builtins.formatting.fixjson,
-					nls.builtins.formatting.gofmt,
-					nls.builtins.formatting.goimports,
-					nls.builtins.code_actions.gitsigns,
+				log_level = vim.log.levels.WARN,
+				filetype = {
+					lua = {
+						stylelua,
+					},
+					go = {
+						gofmt,
+						goimports,
+					},
+					rust = {
+						rustfmt,
+					},
+					json = {
+						prettierd,
+					},
+					yaml = {
+						prettierd,
+					},
+					typescript = {
+						prettierd, -- should be included into eslint_d
+						eslint_d,
+					},
+					typescriptreact = {
+						prettierd, -- should be included into eslint_d
+						eslint_d,
+					},
+					javascript = {
+						prettierd, -- should be included into eslint_d
+						eslint_d,
+					},
+					javascriptreact = {
+						prettierd, -- should be included into eslint_d
+						eslint_d,
+					},
+					python = {
+						function()
+							return {
+								exe = "isort",
+								args = {
+									"-q",
+									"-l 256",
+									"-",
+								},
+								stdin = 1,
+							}
+						end,
+						function()
+							return {
+								exe = "autopep8",
+								args = {
+									"--max-line-length=256",
+									"--experimental",
+									"--ignore=E501",
+									"-",
+								},
+								stdin = 1,
+							}
+						end,
+					},
+					markdown = {
+						prettierd,
+					},
+					css = {
+						prettierd,
+					},
+					scss = {
+						prettierd,
+					},
+					["*"] = {},
+
+					-- ["*"] = {
+					-- "formatter.filetypes.any" defines default configurations for any
+					-- filetype
+					-- 	require("formatter.filetypes.any").remove_trailing_whitespace,
+					-- },
 				},
 			}
+		end,
+		config = function(_, opts)
+			require("formatter").setup(opts)
+
+			local augroup = vim.api.nvim_create_augroup("FF", {})
+			vim.api.nvim_create_autocmd("BufWritePost", {
+				pattern = {
+					"*.lua",
+					"*.go",
+					"*.py",
+					"*.js",
+					"*.jsx",
+					"*.ts",
+					"*.tsx",
+					"*.json",
+					"*.yaml",
+					"*.yml",
+					"*.md",
+					"*.sh",
+					"*.Dockerfile",
+					"*.cpp",
+					"*.c",
+					"*.html",
+					"*.css",
+					"*.scss",
+					"*.less",
+				},
+				group = augroup,
+				callback = function(args)
+					formatBuf(args.buf, true)
+				end,
+			})
 		end,
 	},
 
 	-- Then setting up mason-null-ls to get predefined formatters and linters
-	{
-		"jay-babu/mason-null-ls.nvim",
-		event = { "BufReadPre", "BufNewFile" },
-		dependencies = {
-			-- Depends on mason
-			"williamboman/mason.nvim",
-			-- And ofc we need null-ls to get presets working
-			"jose-elias-alvarez/null-ls.nvim",
-		},
-		opts = {
-			{
-				ensure_installed = {
-					"stylua",
-					"pylint",
-					"isort",
-					"eslint_d",
-					"prettierd",
-					"stylelint",
-					"autopep8",
-					"fixjson",
-					"gofmt",
-					"goimports",
-				},
-				automatic_installation = false,
-				handlers = {
-					pylint = function(_, _)
-						local null_ls = require("null-ls")
-						null_ls.register(null_ls.builtins.diagnostics.pylint.with({
-							extra_args = {
-								"--enable=W0614,E,W,F",
-								"--max-line-length=256",
-								"--disable=C0301,line-too-long,missing-function-docstring,invalid-name,missing-class-docstring,consider-using-f-string,abstract-class-instantiated,broad-except",
-							},
-						}))
-					end,
-					autopep8 = function(_, _)
-						local null_ls = require("null-ls")
-						null_ls.register(null_ls.builtins.formatting.autopep8.with({
-							extra_args = {
-								"--max-line-length=256",
-								"--experimental",
-								"--ignore=E501",
-							},
-						}))
-					end,
-				},
-			},
-		},
-		-- config = function(_, opts)
-		-- 	require("mason-null-ls").setup(opts)
-		-- 	require("null-ls").setup({
-		-- 		sources = {
-		-- 			require("null-ls").builtins.formatting.stylua,
-		-- 		},
-		-- 		on_attach = on_attach,
-		-- 	})
-		-- end,
-	},
+	-- {
+	-- 	"jay-babu/mason-null-ls.nvim",
+	-- 	event = { "BufReadPre", "BufNewFile" },
+	-- 	dependencies = {
+	-- 		-- Depends on mason
+	-- 		"williamboman/mason.nvim",
+	-- 		-- And ofc we need null-ls to get presets working
+	-- 		"jose-elias-alvarez/null-ls.nvim",
+	-- 	},
+	-- 	opts = {
+	-- 		{
+	-- 			ensure_installed = {
+	-- 				"stylua",
+	-- 				"pylint",
+	-- 				"isort",
+	-- 				"eslint_d",
+	-- 				"prettierd",
+	-- 				"stylelint",
+	-- 				"autopep8",
+	-- 				"fixjson",
+	-- 				"gofmt",
+	-- 				"goimports",
+	-- 			},
+	-- 			automatic_installation = false,
+	-- 			handlers = {
+	-- 				pylint = function(_, _)
+	-- 					local null_ls = require("null-ls")
+	-- 					null_ls.register(null_ls.builtins.diagnostics.pylint.with({
+	-- 						extra_args = {
+	-- 							"--enable=W0614,E,W,F",
+	-- 							"--max-line-length=256",
+	-- 							"--disable=C0301,line-too-long,missing-function-docstring,invalid-name,missing-class-docstring,consider-using-f-string,abstract-class-instantiated,broad-except",
+	-- 						},
+	-- 					}))
+	-- 				end,
+	-- 				autopep8 = function(_, _)
+	-- 					local null_ls = require("null-ls")
+	-- 					null_ls.register(null_ls.builtins.formatting.autopep8.with({
+	-- 						extra_args = {
+	-- 							"--max-line-length=256",
+	-- 							"--experimental",
+	-- 							"--ignore=E501",
+	-- 						},
+	-- 					}))
+	-- 				end,
+	-- 			},
+	-- 		},
+	-- 	},
+	-- 	-- config = function(_, opts)
+	-- 	-- 	require("mason-null-ls").setup(opts)
+	-- 	-- 	require("null-ls").setup({
+	-- 	-- 		sources = {
+	-- 	-- 			require("null-ls").builtins.formatting.stylua,
+	-- 	-- 		},
+	-- 	-- 		on_attach = on_attach,
+	-- 	-- 	})
+	-- 	-- end,
+	-- },
 }

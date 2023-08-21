@@ -1,13 +1,13 @@
 return {
 	{ "tpope/vim-surround" },
-    {
+	{
 		"numToStr/Comment.nvim",
 		opts = {
 			-- pre_hook = require("ts_context_commentstring.integrations.comment_nvim").create_pre_hook(),
 		},
-        dependencies = {
-            {'JoosepAlviste/nvim-ts-context-commentstring'},
-        },
+		dependencies = {
+			{ "JoosepAlviste/nvim-ts-context-commentstring" },
+		},
 	},
 	{
 		"sindrets/diffview.nvim",
@@ -16,6 +16,26 @@ return {
 	{
 		"folke/trouble.nvim",
 		dependencies = "nvim-tree/nvim-web-devicons",
+		config = function()
+			require("trouble").setup({})
+
+			vim.keymap.set("n", "<leader>xx", "<cmd>TroubleToggle<cr>", { silent = true, noremap = true })
+			vim.keymap.set(
+				"n",
+				"<leader>xw",
+				"<cmd>TroubleToggle workspace_diagnostics<cr>",
+				{ silent = true, noremap = true }
+			)
+			vim.keymap.set(
+				"n",
+				"<leader>xd",
+				"<cmd>TroubleToggle document_diagnostics<cr>",
+				{ silent = true, noremap = true }
+			)
+			vim.keymap.set("n", "<leader>xl", "<cmd>TroubleToggle loclist<cr>", { silent = true, noremap = true })
+			vim.keymap.set("n", "<leader>xq", "<cmd>TroubleToggle quickfix<cr>", { silent = true, noremap = true })
+			vim.keymap.set("n", "gR", "<cmd>TroubleToggle lsp_references<cr>", { silent = true, noremap = true })
+		end,
 	},
 	{
 		"petertriho/nvim-scrollbar",
@@ -23,9 +43,9 @@ return {
 			handlers = {
 				gitsigns = true,
 			},
-        },
-        dependencies = {"lewis6991/gitsigns.nvim"}
-    },
+		},
+		dependencies = { "lewis6991/gitsigns.nvim" },
+	},
 	{
 		"cappyzawa/trim.nvim",
 		opts = {
@@ -81,9 +101,12 @@ return {
 	{ "github/copilot.vim" },
 
 	-- Pin buffers in certain position
-	{ "stevearc/stickybuf.nvim", config = function()
-        require("stickybuf").setup()
-    end},
+	{
+		"stevearc/stickybuf.nvim",
+		config = function()
+			require("stickybuf").setup()
+		end,
+	},
 	{
 		"jedrzejboczar/possession.nvim",
 		dependencies = { "nvim-lua/plenary.nvim" },
@@ -100,6 +123,13 @@ return {
 		"rmagatti/goto-preview",
 		config = function()
 			require("goto-preview").setup({})
+			local gt = require("goto-preview")
+
+			vim.keymap.set("n", "gpd", gt.goto_preview_definition)
+			vim.keymap.set("n", "gpt", gt.goto_preview_type_definition)
+			vim.keymap.set("n", "gpi", gt.goto_preview_implementation)
+			vim.keymap.set("n", "gP", gt.close_all_win)
+			vim.keymap.set("n", "gpr", gt.goto_preview_references)
 		end,
 	},
 }
