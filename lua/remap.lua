@@ -14,7 +14,7 @@ vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv")
 
 -- Register operations
 --
--- Paste over selection without cahnging register
+-- Paste over selection without changing register
 vim.keymap.set("x", "<leader>p", [["_dP]])
 
 -- Yank into system clipboard
@@ -34,6 +34,7 @@ vim.keymap.set("n", "<C-l>", "<C-W>l")
 
 -- Search and replace word under cursor in a buffer
 vim.keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
+vim.keymap.set("n", "/", [[:let @/ = ""<CR>/]], { noremap = true })
 
 -- Quickfix list
 vim.keymap.set("n", "<leader>q", ":copen<CR>")
